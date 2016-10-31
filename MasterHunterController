@@ -1,0 +1,138 @@
+using UnityEngine;
+using System.Collections;
+
+public class MasterHunterController : MonoBehaviour {
+	public float      speed;
+	public GameObject explosionController;
+	public GameObject bulletGenerator;
+	public GameObject misselGenerator;
+	public Transform[]  muzzleB;
+	public Transform[]  muzzleM;
+	public GameObject player;
+	public float	  left;
+	public float	  right;
+	public float	  posY;
+	public int		  life;
+	
+	public Level1Sequence adjustLevel;
+	
+	float	   movementX;
+	[SerializeField]
+	float	   movementY;
+	GameObject explosion;
+	GameObject bullet;
+	GameObject missel;
+	float	   timerB;
+	float	   timerM;
+	float	   initSpeed;
+	float	   maxTimeM = 5;
+	float	   minTimeM = 3;
+
+	public Camera cam;
+	
+	void Start(){
+		initSpeed = speed;
+		timerB = Random.Range(1, 2);
+		timerM = Random.Range(minTimeM, maxTimeM);
+	}
+	
+	void Update (){
+		print (transform.position.y);
+		if (transform.position.y <= posY){
+			if ( transform.position.x > left && transform.position.x < right
+			    && player.activeInHierarchy){
+				
+				if (timerB > 0) timerB -= Time.deltaTime;
+				if (timerM > 0) timerM -= Time.deltaTime;
+			}
+			else{
+				if (transform.position.x < left){
+					transform.position = new Vector2(left, transform.position.y);
+				}
+				else if (transform.position.x > right){
+					transform.position = new Vector2(right, transform.position.y);
+				}
+
+				speed = -speed;
+				if (speed == 2){
+					speed = 3;
+				}
+				else if (speed ==  -2){
+					speed = -3;
+				}
+				else if (speed ==  -3){
+					speed = -2;
+				}
+				else if (speed ==  3){
+					speed = 2;
+				}
+			}
+			
+			if (player.activeInHierarchy){
+				
+				movementX = transform.position.x;
+				movementX -= speed * Time.deltaTime;
+				
+				transform.position = new Vector2(movementX, transform.position.y);
+			}
+			
+			
+			if (timerB <= 0){
+				float  newTime = Random.Range(0.5f, 1);
+				timerB = newTime;
+				cam.GetComponent<SoundController>().PlaySound("enemyShot");
+				for (int j = 0; j < muzzleB.Length; j++){
+					for (int i = 0; i < bulletGenerator.GetComponent<BulletGenerator>().bullets.Length; i++){
+						bullet = bulletGenerator.GetComponent<BulletGenerator>().bullets[i];
+						if (!bullet.activeInHierarchy){
+							bullet.transform.position = muzzleB[j].position;
+							bullet.SetActive(true); 
+							break;
+						}
+					}
+				}
+			}
+			
+			
+			if (timerM <= 0){
+				timerM = Random.Range(minTimeM, maxTimeM);
+				cam.GetComponent<SoundController>().PlaySound("enemyShot");
+				for (int j = 0; j < muzzleM.Length; j ++){
+					for (int i = 0; i < misselGenerator.GetComponent<BulletGenerator>().bullets.Length; i++){
+						missel = misselGenerator.GetComponent<BulletGenerator>().bullets[i];
+						if (!missel.activeInHierarchy){
+							missel.transform.position = muzzleM[j].position;
+							missel.SetActive(true); 
+							break;
+						}
+					}
+				}
+			}
+
+			if (life <= 0){
+				cam.GetComponent<SoundController>().PlaySound("enemyDeath");
+				for (int i = 0; i < explosionController.GetComponent<ExplosionGenerator>().explosions.Length; i++){
+					explosion = explosionController.GetComponent<ExplosionGenerator>().explosions[i];
+					if (!explosion.activeInHierarchy){
+						explosion.transform.position = transform.position;
+						explosion.SetActive(true);
+						break;
+					}
+				}
+				adjustLevel.boss ++;
+			}
+		}
+		else{
+			movementY = transform.position.y;
+			movementY -= speed * Time.deltaTime;
+			
+			transform.position = new Vector2(transform.position.x, movementY);
+		}
+	}
+	
+	void OnTriggerEnter2D(Collider2D hit){
+		if (hit.transform.tag == "playerBullet"){
+			life --;
+			}
+	}	
+}
