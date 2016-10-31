@@ -1,0 +1,125 @@
+using UnityEngine;
+using System.Collections;
+
+public class EnemyStalkerController : MonoBehaviour {
+	public float      speed;
+	public float	  bottom;
+	public float	  top;
+	public GameObject enemyGenerator;
+	public GameObject explosionController;
+	public GameObject bulletGenerator;
+	public Transform  muzzle;
+	public GameObject player;
+	public float	  left;
+	public GameObject powerUpGenerator;
+	public int		  life;
+	
+	public Sprite	  shipClear;
+	public Sprite	  shipFog;
+	public GameObject shadow;
+	public GameObject fog;
+	
+	public Level1Sequence adjustLevel;
+	
+	float	   movementY;
+	float	   movementX;
+	GameObject explosion;
+	GameObject bullet;
+	float	   timer;
+	bool	   playerSight;
+	float	   initSpeed;
+	
+	public float distX;
+	public Camera cam;
+	
+	void Start(){
+		initSpeed = speed;
+		timer = Random.Range(2, 4);
+	}
+	
+	void Update (){
+		if (fog.activeInHierarchy){
+			shadow.SetActive(true);
+			this.GetComponent<SpriteRenderer>().sprite = shipFog;
+		}
+		else{
+			shadow.SetActive(false);
+			this.GetComponent<SpriteRenderer>().sprite = shipClear;
+		}
+
+		distX = player.transform.position.x - transform.position.x;
+		
+		if (distX < 0.5F && distX > -0.5F
+		    && player.activeInHierarchy){
+			playerSight = true;
+			
+			if (timer > 0) timer -= Time.deltaTime;
+		}
+		else{
+			playerSight = false;
+		}
+
+		if (playerSight || !player.activeInHierarchy){
+			movementY =  transform.position.y;
+			movementY -= speed * Time.deltaTime * 0.5F;
+			transform.position = new Vector2(transform.position.x, movementY);
+		}
+		else{
+			movementY =  transform.position.y;
+			movementY -= speed * Time.deltaTime;
+
+			movementX = transform.position.x;
+			
+			if (distX > 0){
+				movementX += speed * Time.deltaTime;
+			}
+			else{
+				movementX -= speed * Time.deltaTime;
+			}
+
+			transform.position = new Vector2(movementX, movementY);
+		}
+
+		if (movementY < bottom){
+			transform.position = new Vector2(transform.position.x, top);
+		}
+		
+		
+		if (playerSight && timer <= 0){
+			int  newTime = Random.Range(2, 4);
+			timer = newTime;
+			cam.GetComponent<SoundController>().PlaySound("enemyShot");
+			for (int i = 0; i < bulletGenerator.GetComponent<BulletGenerator>().bullets.Length; i++){
+				bullet = bulletGenerator.GetComponent<BulletGenerator>().bullets[i];
+				if (!bullet.activeInHierarchy){
+					bullet.transform.position = muzzle.position;
+					bullet.SetActive(true); 
+					break;
+				}
+			}
+		}
+	}
+	
+	void OnTriggerEnter2D(Collider2D hit){
+		if (hit.transform.tag == "Player" || hit.transform.tag == "playerBullet"){
+			adjustLevel.stalkersDestroied ++;
+			cam.GetComponent<SoundController>().PlaySound("enemyDeath");
+			for (int i = 0; i < explosionController.GetComponent<ExplosionGenerator>().explosions.Length; i++){
+				explosion = explosionController.GetComponent<ExplosionGenerator>().explosions[i];
+				if (!explosion.activeInHierarchy){
+					explosion.transform.position = transform.position;
+					explosion.SetActive(true);
+					break;
+				}
+			}
+			
+			powerUpGenerator.GetComponent<GeneratePowerUps>().cont += 5;
+			powerUpGenerator.GetComponent<GeneratePowerUps>().SendPowerUpContainer(this.gameObject);
+			
+			transform.position = enemyGenerator.transform.position;
+			speed = initSpeed;
+			this.gameObject.SetActive(false);
+			enemyGenerator.GetComponent<EnemyStalkerGenerator>().RemoveEnemy();
+		}	
+	}
+}
